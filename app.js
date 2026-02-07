@@ -134,17 +134,13 @@ async function loadData() {
     if (rColQuestionId === -1 || rColPrompt === -1) throw new Error('Could not find required results columns.');
 
     const metaColumns = new Set([colName, colScore, colRemaining, colEliminated]);
-    const resultQuestionIds = [];
-    for (let i = 1; i < results.length; i++) { const qid = results[i][rColQuestionId]; if (qid) resultQuestionIds.push(qid); }
-    const uniqueQids = [...new Set(resultQuestionIds)];
 
-    // Match contest columns to question IDs using exact match on row 1 labels
+    // Identify question columns: any non-meta column with a non-empty row 1 label (Question ID)
     const questionColumns = [];
     for (let j = 0; j < contestHeader.length; j++) {
       if (metaColumns.has(j)) continue;
       const colLabel = contestHeader[j].trim();
-      const matchedQid = uniqueQids.find(qid => colLabel === qid);
-      if (matchedQid) questionColumns.push({ index: j, id: matchedQid });
+      if (colLabel) questionColumns.push({ index: j, id: colLabel });
     }
 
     const excludedCats = new Set(CONFIG.excludedCategories.map(c => c.toLowerCase()));
