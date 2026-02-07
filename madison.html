@@ -66,27 +66,39 @@
     .refresh-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.2rem; font-size: 0.9rem; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
     .refresh-btn:hover { opacity: 0.85; }
     .last-updated { margin-left: auto; color: var(--text-dim); font-size: 0.8rem; }
-    .score-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .stat-card { background: var(--card-bg); border-radius: 12px; padding: 1rem 1.2rem; text-align: center; border: 1px solid var(--card-border); }
-    .stat-card .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .score-summary { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+    .stat-card { background: var(--card-bg); border-radius: 12px; padding: 0.75rem 1rem; text-align: center; border: 1px solid var(--card-border); flex: 1 1 0; min-width: 90px; }
+    .stat-card .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
     .stat-card .stat-value.gold { color: var(--gold); }
     .stat-card .stat-value.green { color: var(--green); }
     .stat-card .stat-value.red { color: var(--red); }
-    .stat-card .stat-label { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .stat-label { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.2; }
+    @media (max-width: 500px) {
+      .stat-card { padding: 0.5rem 0.4rem; min-width: 60px; }
+      .stat-card .stat-value { font-size: 1.2rem; }
+      .stat-card .stat-label { font-size: 0.55rem; }
+    }
     .chart-section { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid var(--card-border); }
     .chart-section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--text-dim); font-weight: 600; }
     .bar-chart { display: flex; flex-direction: column; gap: 4px; }
     .bar-row { display: flex; align-items: center; gap: 0.5rem; height: 28px; }
     .bar-name { width: 160px; text-align: right; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
     .bar-track { flex: 1; background: var(--bar-track); border-radius: 4px; height: 22px; position: relative; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; display: flex; align-items: center; padding-left: 8px; font-size: 0.75rem; font-weight: 600; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; display: flex; align-items: center; padding-left: 8px; font-size: 0.75rem; font-weight: 600; position: relative; overflow: visible; }
     .bar-fill.highlighted { background: var(--highlight-bar); color: #fff; box-shadow: 0 0 12px var(--accent-glow); }
     .bar-fill.normal { background: var(--other-bar); color: var(--text-dim); }
     .bar-fill.eliminated { background: var(--eliminated-bar); color: var(--gray); }
+    .bar-label { display: none; position: absolute; left: 8px; top: 0; bottom: 0; align-items: center; font-size: 0.65rem; font-weight: 600; white-space: nowrap; pointer-events: none; }
     .bar-row.highlighted .bar-name { font-weight: 700; color: var(--accent); }
     .bar-row.eliminated .bar-name { color: var(--gray); text-decoration: line-through; }
     .bar-score { width: 45px; text-align: right; font-size: 0.8rem; font-weight: 600; flex-shrink: 0; }
     .rank-num { width: 28px; text-align: center; font-size: 0.75rem; color: var(--text-dim); flex-shrink: 0; }
+    @media (max-width: 600px) {
+      .bar-name { display: none; }
+      .bar-label { display: flex; }
+      .bar-row { height: 26px; }
+      .bar-track { height: 20px; }
+    }
     .answers-section { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--card-border); }
     .answers-section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--text-dim); font-weight: 600; }
     .answers-table { width: 100%; border-collapse: collapse; }
@@ -98,6 +110,8 @@
     .result-incorrect { color: var(--red); }
     .result-pending { color: var(--text-dim); font-style: italic; }
     .result-icon { margin-right: 4px; }
+    .answers-table tr.resolved { opacity: 0.55; }
+    @media (prefers-color-scheme: dark) { .answers-table tr.resolved { opacity: 0.45; } }
     .loading { text-align: center; padding: 3rem; color: var(--text-dim); }
     .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--spinner-track); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 0.5rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -290,18 +304,24 @@
         const rowClass = isEliminated ? 'eliminated' : (isHighlighted ? 'highlighted' : '');
         const widthPercent = maxScore > 0 ? (entry.score / maxScore) * 100 : 0;
         const entryRank = ranks.get(entry.name);
-        html += '<div class="bar-row ' + rowClass + '"><span class="rank-num">' + entryRank + '</span><span class="bar-name" title="' + entry.name + '">' + entry.name + '</span><div class="bar-track"><div class="bar-fill ' + barClass + '" style="width: ' + Math.max(widthPercent, 2) + '%"></div></div><span class="bar-score">' + entry.score + '</span></div>';
+        html += '<div class="bar-row ' + rowClass + '"><span class="rank-num">' + entryRank + '</span><span class="bar-name" title="' + entry.name + '">' + entry.name + '</span><div class="bar-track" title="' + entry.name + '"><div class="bar-fill ' + barClass + '" style="width: ' + Math.max(widthPercent, 2) + '%"><span class="bar-label">' + entry.name + '</span></div></div><span class="bar-score">' + entry.score + '</span></div>';
       }
       html += '</div></div>';
       html += '<div class="answers-section"><h2>' + selectedName + "\'s Picks</h2>";
       html += '<table class="answers-table"><thead><tr><th>Category</th><th>Question</th><th>Your Pick</th><th>Result</th><th>Status</th></tr></thead><tbody>';
-      for (const qid of questionColumns) {
+      const sortedQids = [...questionColumns].sort((a, b) => {
+        const aResolved = questionMap[a] && questionMap[a].result ? 1 : 0;
+        const bResolved = questionMap[b] && questionMap[b].result ? 1 : 0;
+        return aResolved - bResolved;
+      });
+      for (const qid of sortedQids) {
         const qInfo = questionMap[qid] || {};
         const pick = selected.answers[qid] || '';
         const result = qInfo.result || '';
         const category = qInfo.category || '';
         const question = qInfo.prompt || qid;
         const catClass = getCategoryClass(category);
+        const isResolved = !!result;
         let statusHtml = '';
         if (!result) { statusHtml = '<span class="result-pending">Pending</span>'; }
         else {
@@ -310,7 +330,7 @@
           if (isCorrect) statusHtml = '<span class="result-correct"><span class="result-icon">&#10003;</span>Correct</span>';
           else statusHtml = '<span class="result-incorrect"><span class="result-icon">&#10007;</span>Incorrect</span>';
         }
-        html += '<tr><td><span class="category-badge ' + catClass + '">' + category + '</span></td><td>' + question + '</td><td>' + pick + '</td><td>' + (result || '<span class="result-pending">--</span>') + '</td><td>' + statusHtml + '</td></tr>';
+        html += '<tr class="' + (isResolved ? 'resolved' : '') + '"><td><span class="category-badge ' + catClass + '">' + category + '</span></td><td>' + question + '</td><td>' + pick + '</td><td>' + (result || '<span class="result-pending">--</span>') + '</td><td>' + statusHtml + '</td></tr>';
       }
       html += '</tbody></table></div>';
       contentEl.innerHTML = html;
