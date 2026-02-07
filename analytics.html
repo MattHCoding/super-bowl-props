@@ -116,7 +116,7 @@
       .answers-table th, .answers-table td { padding: 0.35rem 0.4rem; font-size: 0.7rem; }
       .answers-table th { font-size: 0.6rem; }
       .answers-table .category-badge { font-size: 0.55rem; padding: 1px 5px; }
-      .answers-table .col-category, .answers-table .col-status { display: none; }
+      .answers-table .col-category { display: none; }
     }
     .loading { text-align: center; padding: 3rem; color: var(--text-dim); }
     .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--spinner-track); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 0.5rem; }
@@ -314,7 +314,7 @@
       }
       html += '</div></div>';
       html += '<div class="answers-section"><h2>' + selectedName + "\'s Picks</h2>";
-      html += '<table class="answers-table"><thead><tr><th class="col-category">Category</th><th>Question</th><th>Your Pick</th><th>Result</th><th class="col-status">Status</th></tr></thead><tbody>';
+      html += '<table class="answers-table"><thead><tr><th class="col-category">Category</th><th>Question</th><th>Your Pick</th><th>Result</th></tr></thead><tbody>';
       const sortedQids = [...questionColumns].sort((a, b) => {
         const aResolved = questionMap[a] && questionMap[a].result ? 1 : 0;
         const bResolved = questionMap[b] && questionMap[b].result ? 1 : 0;
@@ -328,15 +328,15 @@
         const question = qInfo.prompt || qid;
         const catClass = getCategoryClass(category);
         const isResolved = !!result;
-        let statusHtml = '';
-        if (!result) { statusHtml = '<span class="result-pending">Pending</span>'; }
+        let pickHtml = '';
+        if (!result) { pickHtml = pick; }
         else {
           const pickSelection = pick.replace(/\s*\(\d+\s*Points?\)\s*$/, '').trim();
           const isCorrect = pickSelection && (result === pickSelection || result.includes(pickSelection) || pickSelection.includes(result));
-          if (isCorrect) statusHtml = '<span class="result-correct"><span class="result-icon">&#10003;</span>Correct</span>';
-          else statusHtml = '<span class="result-incorrect"><span class="result-icon">&#10007;</span>Incorrect</span>';
+          if (isCorrect) pickHtml = '<span class="result-correct"><span class="result-icon">&#10003;</span>' + pick + '</span>';
+          else pickHtml = '<span class="result-incorrect"><span class="result-icon">&#10007;</span>' + pick + '</span>';
         }
-        html += '<tr class="' + (isResolved ? 'resolved' : '') + '"><td class="col-category"><span class="category-badge ' + catClass + '">' + category + '</span></td><td>' + question + '</td><td>' + pick + '</td><td>' + (result || '<span class="result-pending">--</span>') + '</td><td class="col-status">' + statusHtml + '</td></tr>';
+        html += '<tr class="' + (isResolved ? 'resolved' : '') + '"><td class="col-category"><span class="category-badge ' + catClass + '">' + category + '</span></td><td>' + question + '</td><td>' + pickHtml + '</td><td>' + (result || '<span class="result-pending">--</span>') + '</td></tr>';
       }
       html += '</tbody></table></div>';
       contentEl.innerHTML = html;
