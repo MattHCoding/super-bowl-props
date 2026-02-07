@@ -236,15 +236,12 @@
       const contentEl = document.getElementById('content');
       contentEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading data from Google Sheets...</div>';
       try {
-        const [contestTable, resultsTable] = await Promise.all([loadSheetJsonp(CONFIG.contestGid, 1), loadSheetJsonp(CONFIG.resultsGid)]);
+        const [contestTable, resultsTable] = await Promise.all([loadSheetJsonp(CONFIG.contestGid, 3), loadSheetJsonp(CONFIG.resultsGid)]);
         const contest = gvizToRows(contestTable);
         const results = gvizToRows(resultsTable);
-        // Contest sheet layout: row 1 = Question IDs (col labels from gviz), row 2 = Forms headers (skip), row 3 = fallback headers, row 4+ = data
-        // Build merged header: use row 1 (col label) if non-empty, otherwise fall back to row 3 (index 2 in data)
-        const row1Header = contest[0];
-        const row3Header = contest.length > 2 ? contest[2] : [];
-        const contestHeader = row1Header.map((val, i) => val || (row3Header[i] || ''));
-        const contestData = contest.slice(3); // rows 4+ (actual participant data)
+        // Contest sheet: 3 header rows (Question IDs, spacer, Forms headers) merged by gviz into col labels. Data starts at row 4.
+        const contestHeader = contest[0];
+        const contestData = contest.slice(1);
         const resultsHeader = results[0];
         const colName = findColumn(contestHeader, CONFIG.contestColumns.name);
         const colScore = findColumn(contestHeader, CONFIG.contestColumns.score);
@@ -257,10 +254,16 @@
         const rColResult = findColumn(resultsHeader, CONFIG.resultsColumns.result);
         if (rColQuestionId === -1 || rColPrompt === -1) throw new Error('Could not find required results columns.');
         const metaColumns = new Set([colName, colScore, colRemaining, colEliminated]);
-        const resultQuestionIds = new Set();
-        for (let i = 1; i < results.length; i++) { const qid = results[i][rColQuestionId]; if (qid) resultQuestionIds.add(qid); }
+        const resultQuestionIds = [];
+        for (let i = 1; i < results.length; i++) { const qid = results[i][rColQuestionId]; if (qid) resultQuestionIds.push(qid); }
+        const uniqueQids = [...new Set(resultQuestionIds)];
         const questionColumns = [];
-        for (let j = 0; j < contestHeader.length; j++) { if (metaColumns.has(j)) continue; if (resultQuestionIds.has(contestHeader[j])) questionColumns.push({ index: j, id: contestHeader[j] }); }
+        for (let j = 0; j < contestHeader.length; j++) {
+          if (metaColumns.has(j)) continue;
+          const colLabel = contestHeader[j].trim();
+          const matchedQid = uniqueQids.find(qid => colLabel === qid || colLabel.startsWith(qid + ' '));
+          if (matchedQid) questionColumns.push({ index: j, id: matchedQid });
+        }
         const excludedCats = new Set(CONFIG.excludedCategories.map(c => c.toLowerCase()));
         const questionMap = {};
         for (let i = 1; i < results.length; i++) {
