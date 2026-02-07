@@ -33,19 +33,31 @@ function getCategoryClass(category) {
 }
 
 // ---- Utility functions ----
+// Find a column whose label matches the keyword. Uses word-boundary-aware matching
+// so that e.g. "score" matches "Score" but not "FirstTypeOfScore".
 function findColumn(headers, keyword) {
   const kw = keyword.toLowerCase();
-  return headers.findIndex(h => h.toLowerCase().includes(kw));
+  const re = new RegExp('(^|\\W)' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|\\W)', 'i');
+  return headers.findIndex(h => re.test(h));
 }
 
 function isParticipantRow(row, colName, colScore) {
   const name = (row[colName] || '').trim();
   const scoreRaw = row[colScore] || '';
   if (!name) return false;
-  // Skip rows where the name column contains a header-like keyword
   if (/^(what is your|timestamp|score|eliminated|total remaining|live scoreboard)/i.test(name)) return false;
   const score = parseFloat(scoreRaw);
   return !isNaN(score);
+}
+
+// Extract the Question ID from a column label. Google auto-detection may merge
+// the Question ID row with the Forms header row, producing labels like
+// "HeadsOrTails What will be the result..." or "HeadsOrTails HeadsOrTails".
+// The Question ID is always the first space-delimited token.
+function extractQuestionId(label) {
+  const trimmed = label.trim();
+  const spaceIdx = trimmed.indexOf(' ');
+  return spaceIdx === -1 ? trimmed : trimmed.substring(0, spaceIdx);
 }
 
 // ---- Data loading ----
@@ -92,26 +104,15 @@ async function loadData() {
   const contentEl = document.getElementById('content');
   contentEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading data from Google Sheets...</div>';
   try {
-    const [contestTable, resultsTable] = await Promise.all([loadSheetJsonp(CONFIG.contestGid, 1), loadSheetJsonp(CONFIG.resultsGid)]);
+    // No headers param for contest — let Google auto-detect labels.
+    // This gives clean meta labels ("Score", "Total Remaining") and question labels
+    // like "HeadsOrTails What will..." or "HeadsOrTails HeadsOrTails".
+    const [contestTable, resultsTable] = await Promise.all([loadSheetJsonp(CONFIG.contestGid), loadSheetJsonp(CONFIG.resultsGid)]);
     const contest = gvizToRows(contestTable);
     const results = gvizToRows(resultsTable);
 
-    // Contest sheet: row 1 = Question IDs as col labels (empty for meta columns like name/score).
-    // Rows 2+ contain Forms headers then participant data.
     const contestHeader = contest[0];
     const allRows = contest.slice(1);
-
-    // Backfill empty col labels from intermediate rows (Forms headers, etc.)
-    // so that meta columns like "name", "score", "eliminated" can be found.
-    for (let i = 0; i < Math.min(allRows.length, 5); i++) {
-      for (let j = 0; j < contestHeader.length; j++) {
-        if (!contestHeader[j].trim()) {
-          const val = (allRows[i][j] || '').trim();
-          if (val) contestHeader[j] = val;
-        }
-      }
-      if (findColumn(contestHeader, 'name') !== -1 && findColumn(contestHeader, 'score') !== -1) break;
-    }
 
     const colName = findColumn(contestHeader, CONFIG.contestColumns.name);
     const colScore = findColumn(contestHeader, CONFIG.contestColumns.score);
@@ -119,7 +120,7 @@ async function loadData() {
     const colEliminated = findColumn(contestHeader, CONFIG.contestColumns.eliminated);
     if (colName === -1 || colScore === -1) throw new Error('Could not find required columns.');
 
-    // Find where actual participant data starts
+    // Skip any non-participant rows at the top (header remnants, etc.)
     let dataStart = 0;
     for (let i = 0; i < allRows.length; i++) {
       if (isParticipantRow(allRows[i], colName, colScore)) { dataStart = i; break; }
@@ -133,14 +134,20 @@ async function loadData() {
     const rColResult = findColumn(resultsHeader, CONFIG.resultsColumns.result);
     if (rColQuestionId === -1 || rColPrompt === -1) throw new Error('Could not find required results columns.');
 
-    const metaColumns = new Set([colName, colScore, colRemaining, colEliminated]);
+    // Build set of meta column indices (name, score, remaining, eliminated, plus timestamp/email)
+    const colTimestamp = findColumn(contestHeader, 'timestamp');
+    const colEmail = findColumn(contestHeader, 'email');
+    const metaColumns = new Set([colName, colScore, colRemaining, colEliminated, colTimestamp, colEmail].filter(i => i !== -1));
 
-    // Identify question columns: any non-meta column with a non-empty row 1 label (Question ID)
+    // Identify question columns: any non-meta column whose label starts with a Question ID.
+    // Extract the ID as the first token (before the first space).
     const questionColumns = [];
     for (let j = 0; j < contestHeader.length; j++) {
       if (metaColumns.has(j)) continue;
       const colLabel = contestHeader[j].trim();
-      if (colLabel) questionColumns.push({ index: j, id: colLabel });
+      if (!colLabel) continue;
+      const qid = extractQuestionId(colLabel);
+      if (qid) questionColumns.push({ index: j, id: qid });
     }
 
     const excludedCats = new Set(CONFIG.excludedCategories.map(c => c.toLowerCase()));
