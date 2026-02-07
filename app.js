@@ -35,6 +35,12 @@ function getCategoryClass(category) {
 // ---- Utility functions ----
 function findColumn(headers, keyword) {
   const kw = keyword.toLowerCase();
+  // Prefer exact match, then word-boundary match, then substring match
+  const exact = headers.findIndex(h => h.toLowerCase().trim() === kw);
+  if (exact !== -1) return exact;
+  const wordRe = new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+  const word = headers.findIndex(h => wordRe.test(h));
+  if (word !== -1) return word;
   return headers.findIndex(h => h.toLowerCase().includes(kw));
 }
 
