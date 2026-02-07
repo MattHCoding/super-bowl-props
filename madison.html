@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Bowl LX Props - Live Scores</title>
+  <style>
+    /* ===== Light theme (default) ===== */
+    :root {
+      --bg: #f5f5f7;
+      --card-bg: #ffffff;
+      --card-border: #e0e0e0;
+      --accent: #2563eb;
+      --accent-glow: rgba(37, 99, 235, 0.15);
+      --gold: #b8860b;
+      --green: #16a34a;
+      --red: #dc2626;
+      --gray: #9ca3af;
+      --text: #1f2937;
+      --text-dim: #6b7280;
+      --bar-track: #e5e7eb;
+      --eliminated-bar: #d1d5db;
+      --highlight-bar: #2563eb;
+      --other-bar: #c7d2fe;
+      --header-bg: linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%);
+      --header-border: #2563eb;
+      --table-border: #e5e7eb;
+      --spinner-track: #d1d5db;
+    }
+
+    /* ===== Dark theme ===== */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0a0a1a;
+        --card-bg: #141428;
+        --card-border: #2a2a40;
+        --accent: #4f8cff;
+        --accent-glow: rgba(79, 140, 255, 0.25);
+        --gold: #ffd700;
+        --green: #34d399;
+        --red: #f87171;
+        --gray: #6b7280;
+        --text: #e5e7eb;
+        --text-dim: #9ca3af;
+        --bar-track: #1a1a2e;
+        --eliminated-bar: #374151;
+        --highlight-bar: #4f8cff;
+        --other-bar: #3b3b5c;
+        --header-bg: linear-gradient(135deg, #1a1a3e 0%, #0d0d2b 100%);
+        --header-border: #4f8cff;
+        --table-border: #1f1f3a;
+        --spinner-track: #333;
+      }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { background: var(--header-bg); border-bottom: 2px solid var(--header-border); padding: 1.5rem 2rem; text-align: center; }
+    header h1 { font-size: 1.8rem; font-weight: 700; background: linear-gradient(90deg, #60a5fa, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    header p { color: #9ca3af; margin-top: 0.3rem; font-size: 0.9rem; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+    .controls { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .controls label { font-weight: 600; font-size: 0.95rem; }
+    .controls select { background: var(--card-bg); color: var(--text); border: 1px solid var(--card-border); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.95rem; cursor: pointer; min-width: 220px; }
+    .controls select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .refresh-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.2rem; font-size: 0.9rem; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+    .refresh-btn:hover { opacity: 0.85; }
+    .last-updated { margin-left: auto; color: var(--text-dim); font-size: 0.8rem; }
+    .score-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--card-bg); border-radius: 12px; padding: 1rem 1.2rem; text-align: center; border: 1px solid var(--card-border); }
+    .stat-card .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .stat-card .stat-value.gold { color: var(--gold); }
+    .stat-card .stat-value.green { color: var(--green); }
+    .stat-card .stat-value.red { color: var(--red); }
+    .stat-card .stat-label { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .chart-section { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid var(--card-border); }
+    .chart-section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--text-dim); font-weight: 600; }
+    .bar-chart { display: flex; flex-direction: column; gap: 4px; }
+    .bar-row { display: flex; align-items: center; gap: 0.5rem; height: 28px; }
+    .bar-name { width: 160px; text-align: right; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .bar-track { flex: 1; background: var(--bar-track); border-radius: 4px; height: 22px; position: relative; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; display: flex; align-items: center; padding-left: 8px; font-size: 0.75rem; font-weight: 600; }
+    .bar-fill.highlighted { background: var(--highlight-bar); color: #fff; box-shadow: 0 0 12px var(--accent-glow); }
+    .bar-fill.normal { background: var(--other-bar); color: var(--text-dim); }
+    .bar-fill.eliminated { background: var(--eliminated-bar); color: var(--gray); }
+    .bar-row.highlighted .bar-name { font-weight: 700; color: var(--accent); }
+    .bar-row.eliminated .bar-name { color: var(--gray); text-decoration: line-through; }
+    .bar-score { width: 45px; text-align: right; font-size: 0.8rem; font-weight: 600; flex-shrink: 0; }
+    .rank-num { width: 28px; text-align: center; font-size: 0.75rem; color: var(--text-dim); flex-shrink: 0; }
+    .answers-section { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--card-border); }
+    .answers-section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--text-dim); font-weight: 600; }
+    .answers-table { width: 100%; border-collapse: collapse; }
+    .answers-table th, .answers-table td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid var(--table-border); font-size: 0.85rem; }
+    .answers-table th { color: var(--text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .answers-table tr:last-child td { border-bottom: none; }
+    .answers-table .category-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .result-correct { color: var(--green); font-weight: 600; }
+    .result-incorrect { color: var(--red); }
+    .result-pending { color: var(--text-dim); font-style: italic; }
+    .result-icon { margin-right: 4px; }
+    .loading { text-align: center; padding: 3rem; color: var(--text-dim); }
+    .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--spinner-track); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 0.5rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .no-selection { text-align: center; padding: 3rem; color: var(--text-dim); font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="page-title"></h1>
+    <p id="page-subtitle"></p>
+  </header>
+  <div class="container">
+    <div class="controls">
+      <label for="name-select">Viewing:</label>
+      <select id="name-select"><option value="">-- Select a name --</option></select>
+      <button class="refresh-btn" onclick="loadData()">Refresh</button>
+      <span class="last-updated" id="last-updated"></span>
+    </div>
+    <div id="content">
+      <div class="no-selection">Select a name above to view scores and answers.</div>
+    </div>
+  </div>
+  <script>
+    const CONFIG = {
+      sheetId: '1mk9zs9MfH6WwF-23lpVSgpK1--ELNHYlSp6XQikgEFQ',
+      contestGid: '1392613912',
+      resultsGid: '114244235',
+      title: 'Super Bowl LX Props',
+      subtitle: 'Madison Contest \u2014 Live Score Viewer',
+      contestColumns: { name: 'name', score: 'score', remaining: 'remaining', eliminated: 'eliminated' },
+      eliminatedValue: 'Y',
+      resultsColumns: { category: 'category', questionId: 'question id', prompt: 'question prompt', result: 'result' },
+      excludedCategories: ['informational'],
+      refreshInterval: 60,
+    };
+
+    let allData = null;
+    let categoryStyleMap = {};
+    document.getElementById('page-title').textContent = CONFIG.title;
+    document.getElementById('page-subtitle').textContent = CONFIG.subtitle;
+    document.title = CONFIG.title + ' - Live Scores';
+
+    const CATEGORY_PALETTE = [
+      { bg: '#1e3a5f', color: '#60a5fa' }, { bg: '#3b1f54', color: '#c084fc' },
+      { bg: '#1a3d2e', color: '#34d399' }, { bg: '#3d2b1a', color: '#fbbf24' },
+      { bg: '#3d1a2b', color: '#f472b6' }, { bg: '#1a3d3d', color: '#2dd4bf' },
+      { bg: '#2d2d1a', color: '#a3e635' }, { bg: '#3d1a1a', color: '#fca5a5' },
+      { bg: '#1a2a3d', color: '#93c5fd' }, { bg: '#2a1a3d', color: '#d8b4fe' },
+      { bg: '#3d3d1a', color: '#fde047' }, { bg: '#1a3d28', color: '#6ee7b7' },
+    ];
+    let nextPaletteIndex = 0;
+    const dynamicStyleSheet = document.createElement('style');
+    document.head.appendChild(dynamicStyleSheet);
+
+    function getCategoryClass(category) {
+      if (!category) return '';
+      const key = category.toLowerCase().trim();
+      if (categoryStyleMap[key]) return categoryStyleMap[key];
+      const className = 'cat-dyn-' + nextPaletteIndex;
+      const palette = CATEGORY_PALETTE[nextPaletteIndex % CATEGORY_PALETTE.length];
+      dynamicStyleSheet.textContent += `.${className} { background: ${palette.bg}; color: ${palette.color}; }\n`;
+      categoryStyleMap[key] = className;
+      nextPaletteIndex++;
+      return className;
+    }
+
+    function findColumn(headers, keyword) {
+      const kw = keyword.toLowerCase();
+      return headers.findIndex(h => h.toLowerCase().includes(kw));
+    }
+
+    function loadSheetJsonp(gid) {
+      return new Promise((resolve, reject) => {
+        const callbackName = '_gvizCb_' + gid + '_' + Date.now();
+        const script = document.createElement('script');
+        script.src = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?gid=${gid}&tqx=responseHandler:${callbackName}`;
+        window[callbackName] = function(response) {
+          delete window[callbackName]; script.remove();
+          if (response && response.table) resolve(response.table);
+          else reject(new Error('Invalid response from Google Sheets'));
+        };
+        script.onerror = function() { delete window[callbackName]; script.remove(); reject(new Error('Failed to load sheet data')); };
+        document.head.appendChild(script);
+      });
+    }
+
+    function gvizToRows(table) {
+      const colLabels = table.cols.map(c => c.label || '');
+      const hasLabels = colLabels.some(l => l.length > 0);
+      const dataRows = table.rows.map(row => row.c.map(cell => { if (!cell) return ''; return cell.v != null ? String(cell.v) : (cell.f || ''); }));
+      if (hasLabels) return [colLabels, ...dataRows];
+      else return dataRows;
+    }
+
+    function computeRanks(sorted) {
+      const ranks = new Map();
+      let i = 0;
+      while (i < sorted.length) {
+        let j = i + 1;
+        while (j < sorted.length && sorted[j].score === sorted[i].score) j++;
+        const isTied = (j - i) > 1;
+        const rankNum = i + 1;
+        for (let k = i; k < j; k++) ranks.set(sorted[k].name, isTied ? `T${rankNum}` : `${rankNum}`);
+        i = j;
+      }
+      return ranks;
+    }
+
+    async function loadData() {
+      const contentEl = document.getElementById('content');
+      contentEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading data from Google Sheets...</div>';
+      try {
+        const [contestTable, resultsTable] = await Promise.all([loadSheetJsonp(CONFIG.contestGid), loadSheetJsonp(CONFIG.resultsGid)]);
+        const contest = gvizToRows(contestTable);
+        const results = gvizToRows(resultsTable);
+        const contestHeader = contest[0];
+        const resultsHeader = results[0];
+        const colName = findColumn(contestHeader, CONFIG.contestColumns.name);
+        const colScore = findColumn(contestHeader, CONFIG.contestColumns.score);
+        const colRemaining = findColumn(contestHeader, CONFIG.contestColumns.remaining);
+        const colEliminated = findColumn(contestHeader, CONFIG.contestColumns.eliminated);
+        if (colName === -1 || colScore === -1) throw new Error('Could not find required columns.');
+        const rColCategory = findColumn(resultsHeader, CONFIG.resultsColumns.category);
+        const rColQuestionId = findColumn(resultsHeader, CONFIG.resultsColumns.questionId);
+        const rColPrompt = findColumn(resultsHeader, CONFIG.resultsColumns.prompt);
+        const rColResult = findColumn(resultsHeader, CONFIG.resultsColumns.result);
+        if (rColQuestionId === -1 || rColPrompt === -1) throw new Error('Could not find required results columns.');
+        const metaColumns = new Set([colName, colScore, colRemaining, colEliminated]);
+        const resultQuestionIds = new Set();
+        for (let i = 1; i < results.length; i++) { const qid = results[i][rColQuestionId]; if (qid) resultQuestionIds.add(qid); }
+        const questionColumns = [];
+        for (let j = 0; j < contestHeader.length; j++) { if (metaColumns.has(j)) continue; if (resultQuestionIds.has(contestHeader[j])) questionColumns.push({ index: j, id: contestHeader[j] }); }
+        const excludedCats = new Set(CONFIG.excludedCategories.map(c => c.toLowerCase()));
+        const questionMap = {};
+        for (let i = 1; i < results.length; i++) {
+          const category = (rColCategory !== -1 ? results[i][rColCategory] : '') || '';
+          if (excludedCats.has(category.toLowerCase().trim())) continue;
+          const qid = results[i][rColQuestionId] || '';
+          const prompt = results[i][rColPrompt] || '';
+          const result = (rColResult !== -1 ? results[i][rColResult] : '') || '';
+          if (qid) questionMap[qid] = { prompt, result, category };
+        }
+        const entries = [];
+        for (let i = 1; i < contest.length; i++) {
+          const r = contest[i];
+          const answers = {};
+          for (const qc of questionColumns) answers[qc.id] = r[qc.index] || '';
+          entries.push({ name: r[colName] || '', score: parseInt(r[colScore]) || 0, totalRemaining: colRemaining !== -1 ? (parseInt(r[colRemaining]) || 0) : 0, eliminated: colEliminated !== -1 ? (r[colEliminated] === CONFIG.eliminatedValue) : false, answers });
+        }
+        allData = { entries, questionMap, questionColumns: questionColumns.map(qc => qc.id) };
+        const select = document.getElementById('name-select');
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">-- Select a name --</option>';
+        const sortedNames = entries.map(e => e.name).filter(n => n).sort();
+        for (const name of sortedNames) { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; select.appendChild(opt); }
+        if (currentVal && entries.find(e => e.name === currentVal)) select.value = currentVal;
+        document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+        renderView();
+      } catch (err) { contentEl.innerHTML = '<div class="no-selection">Error loading data: ' + err.message + '<br>Make sure the spreadsheet is accessible.</div>'; }
+    }
+
+    function renderView() {
+      const selectedName = document.getElementById('name-select').value;
+      const contentEl = document.getElementById('content');
+      if (!allData) { contentEl.innerHTML = '<div class="no-selection">Data not loaded yet.</div>'; return; }
+      if (!selectedName) { contentEl.innerHTML = '<div class="no-selection">Select a name above to view scores and answers.</div>'; return; }
+      const { entries, questionMap, questionColumns } = allData;
+      const selected = entries.find(e => e.name === selectedName);
+      if (!selected) return;
+      const answeredCount = questionColumns.filter(q => questionMap[q] && questionMap[q].result).length;
+      const totalQuestions = questionColumns.length;
+      const sorted = [...entries].sort((a, b) => b.score - a.score || a.totalRemaining - b.totalRemaining);
+      const ranks = computeRanks(sorted);
+      const myRank = ranks.get(selectedName);
+      const maxScore = Math.max(...entries.map(e => e.score), 1);
+      let html = '';
+      html += '<div class="score-summary">';
+      html += '<div class="stat-card"><div class="stat-value gold">' + selected.score + '</div><div class="stat-label">Current Score</div></div>';
+      html += '<div class="stat-card"><div class="stat-value">' + myRank + '</div><div class="stat-label">Rank</div></div>';
+      html += '<div class="stat-card"><div class="stat-value green">' + selected.totalRemaining + '</div><div class="stat-label">Points Remaining</div></div>';
+      html += '<div class="stat-card"><div class="stat-value ' + (selected.eliminated ? 'red' : 'green') + '">' + (selected.eliminated ? 'OUT' : 'ALIVE') + '</div><div class="stat-label">Status</div></div>';
+      html += '<div class="stat-card"><div class="stat-value">' + answeredCount + '/' + totalQuestions + '</div><div class="stat-label">Questions Resolved</div></div>';
+      html += '</div>';
+      html += '<div class="chart-section"><h2>Leaderboard</h2><div class="bar-chart">';
+      for (let i = 0; i < sorted.length; i++) {
+        const entry = sorted[i];
+        const isHighlighted = entry.name === selectedName;
+        const isEliminated = entry.eliminated;
+        const barClass = isHighlighted ? 'highlighted' : (isEliminated ? 'eliminated' : 'normal');
+        const rowClass = isEliminated ? 'eliminated' : (isHighlighted ? 'highlighted' : '');
+        const widthPercent = maxScore > 0 ? (entry.score / maxScore) * 100 : 0;
+        const entryRank = ranks.get(entry.name);
+        html += '<div class="bar-row ' + rowClass + '"><span class="rank-num">' + entryRank + '</span><span class="bar-name" title="' + entry.name + '">' + entry.name + '</span><div class="bar-track"><div class="bar-fill ' + barClass + '" style="width: ' + Math.max(widthPercent, 2) + '%"></div></div><span class="bar-score">' + entry.score + '</span></div>';
+      }
+      html += '</div></div>';
+      html += '<div class="answers-section"><h2>' + selectedName + "\'s Picks</h2>";
+      html += '<table class="answers-table"><thead><tr><th>Category</th><th>Question</th><th>Your Pick</th><th>Result</th><th>Status</th></tr></thead><tbody>';
+      for (const qid of questionColumns) {
+        const qInfo = questionMap[qid] || {};
+        const pick = selected.answers[qid] || '';
+        const result = qInfo.result || '';
+        const category = qInfo.category || '';
+        const question = qInfo.prompt || qid;
+        const catClass = getCategoryClass(category);
+        let statusHtml = '';
+        if (!result) { statusHtml = '<span class="result-pending">Pending</span>'; }
+        else {
+          const pickSelection = pick.replace(/\s*\(\d+\s*Points?\)\s*$/, '').trim();
+          const isCorrect = pickSelection && (result === pickSelection || result.includes(pickSelection) || pickSelection.includes(result));
+          if (isCorrect) statusHtml = '<span class="result-correct"><span class="result-icon">&#10003;</span>Correct</span>';
+          else statusHtml = '<span class="result-incorrect"><span class="result-icon">&#10007;</span>Incorrect</span>';
+        }
+        html += '<tr><td><span class="category-badge ' + catClass + '">' + category + '</span></td><td>' + question + '</td><td>' + pick + '</td><td>' + (result || '<span class="result-pending">--</span>') + '</td><td>' + statusHtml + '</td></tr>';
+      }
+      html += '</tbody></table></div>';
+      contentEl.innerHTML = html;
+    }
+
+    document.getElementById('name-select').addEventListener('change', renderView);
+    loadData();
+    setInterval(loadData, CONFIG.refreshInterval * 1000);
+  </script>
+</body>
+</html>
