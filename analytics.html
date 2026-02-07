@@ -193,11 +193,13 @@
       return headers.findIndex(h => h.toLowerCase().includes(kw));
     }
 
-    function loadSheetJsonp(gid) {
+    function loadSheetJsonp(gid, headers) {
       return new Promise((resolve, reject) => {
         const callbackName = '_gvizCb_' + gid + '_' + Date.now();
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?gid=${gid}&tqx=responseHandler:${callbackName}`;
+        let url = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?gid=${gid}&tqx=responseHandler:${callbackName}`;
+        if (headers) url += '&headers=' + headers;
+        script.src = url;
         window[callbackName] = function(response) {
           delete window[callbackName]; script.remove();
           if (response && response.table) resolve(response.table);
@@ -234,10 +236,15 @@
       const contentEl = document.getElementById('content');
       contentEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading data from Google Sheets...</div>';
       try {
-        const [contestTable, resultsTable] = await Promise.all([loadSheetJsonp(CONFIG.contestGid), loadSheetJsonp(CONFIG.resultsGid)]);
+        const [contestTable, resultsTable] = await Promise.all([loadSheetJsonp(CONFIG.contestGid, 1), loadSheetJsonp(CONFIG.resultsGid)]);
         const contest = gvizToRows(contestTable);
         const results = gvizToRows(resultsTable);
-        const contestHeader = contest[0];
+        // Contest sheet layout: row 1 = Question IDs (col labels from gviz), row 2 = Forms headers (skip), row 3 = fallback headers, row 4+ = data
+        // Build merged header: use row 1 (col label) if non-empty, otherwise fall back to row 3 (index 2 in data)
+        const row1Header = contest[0];
+        const row3Header = contest.length > 2 ? contest[2] : [];
+        const contestHeader = row1Header.map((val, i) => val || (row3Header[i] || ''));
+        const contestData = contest.slice(3); // rows 4+ (actual participant data)
         const resultsHeader = results[0];
         const colName = findColumn(contestHeader, CONFIG.contestColumns.name);
         const colScore = findColumn(contestHeader, CONFIG.contestColumns.score);
@@ -265,8 +272,7 @@
           if (qid) questionMap[qid] = { prompt, result, category };
         }
         const entries = [];
-        for (let i = 1; i < contest.length; i++) {
-          const r = contest[i];
+        for (const r of contestData) {
           const answers = {};
           for (const qc of questionColumns) answers[qc.id] = r[qc.index] || '';
           entries.push({ name: r[colName] || '', score: parseInt(r[colScore]) || 0, totalRemaining: colRemaining !== -1 ? (parseInt(r[colRemaining]) || 0) : 0, eliminated: colEliminated !== -1 ? (r[colEliminated] === CONFIG.eliminatedValue) : false, answers });
