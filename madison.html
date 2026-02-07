@@ -112,6 +112,10 @@
     .result-icon { margin-right: 4px; }
     .answers-table tr.resolved { opacity: 0.55; }
     @media (prefers-color-scheme: dark) { .answers-table tr.resolved { opacity: 0.45; } }
+    .picks-hidden-wrapper { position: relative; }
+    .picks-hidden-wrapper .answers-table { filter: blur(8px); user-select: none; pointer-events: none; }
+    .picks-hidden-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; z-index: 2; background: rgba(0,0,0,0.05); border-radius: 12px; padding: 2rem; }
+    .picks-hidden-overlay span { font-size: 1.1rem; font-weight: 700; color: var(--text-dim); background: var(--card-bg); padding: 1rem 1.5rem; border-radius: 10px; border: 1px solid var(--card-border); box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
     @media (max-width: 600px) {
       .answers-table th, .answers-table td { padding: 0.35rem 0.4rem; font-size: 0.7rem; }
       .answers-table th { font-size: 0.6rem; }
@@ -313,7 +317,9 @@
         html += '<div class="bar-row ' + rowClass + '"><span class="rank-num">' + entryRank + '</span><span class="bar-name" title="' + entry.name + '">' + entry.name + '</span><div class="bar-track" title="' + entry.name + '"><div class="bar-fill ' + barClass + '" style="width: ' + Math.max(widthPercent, 2) + '%"><span class="bar-label">' + entry.name + '</span></div></div><span class="bar-score">' + entry.score + '</span></div>';
       }
       html += '</div></div>';
+      const noOneHasPoints = entries.every(e => e.score === 0);
       html += '<div class="answers-section"><h2>' + selectedName + "\'s Picks</h2>";
+      if (noOneHasPoints) html += '<div class="picks-hidden-wrapper">';
       html += '<table class="answers-table"><thead><tr><th class="col-category">Category</th><th>Question</th><th>Your Pick</th><th>Result</th></tr></thead><tbody>';
       const sortedQids = [...questionColumns].sort((a, b) => {
         const aResolved = questionMap[a] && questionMap[a].result ? 1 : 0;
@@ -338,7 +344,9 @@
         }
         html += '<tr class="' + (isResolved ? 'resolved' : '') + '"><td class="col-category"><span class="category-badge ' + catClass + '">' + category + '</span></td><td>' + question + '</td><td>' + pickHtml + '</td><td>' + (result || '<span class="result-pending">--</span>') + '</td></tr>';
       }
-      html += '</tbody></table></div>';
+      html += '</tbody></table>';
+      if (noOneHasPoints) html += '<div class="picks-hidden-overlay"><span>To prevent cheating, picks will be hidden until Kickoff</span></div></div>';
+      html += '</div>';
       contentEl.innerHTML = html;
     }
 
